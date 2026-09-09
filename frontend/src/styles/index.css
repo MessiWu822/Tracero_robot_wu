@@ -1,0 +1,207 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import './theme.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  html {
+    @apply overflow-x-hidden;
+  }
+  body {
+    @apply min-h-svh w-full bg-background text-foreground has-[div[data-variant='inset']]:bg-sidebar;
+    background: var(--app-background-gradient), var(--background);
+    background-attachment: fixed;
+  }
+
+  [data-slot='sidebar-wrapper'] {
+    background: var(--app-background-gradient), var(--background);
+    background-attachment: fixed;
+  }
+
+  [data-slot='sidebar-inset'] {
+    background-color: color-mix(in oklch, var(--background) 88%, transparent);
+    backdrop-filter: blur(18px);
+    border: 1px solid oklch(0.75 0.08 270 / 0.25);
+  }
+
+  .dark [data-slot='sidebar-inset'] {
+    background-color: color-mix(in oklch, var(--background) 84%, transparent);
+    border: 1px solid oklch(0.55 0.12 270 / 0.2);
+  }
+
+  /* Override Radix scroll locking for sticky headers */
+  body[data-scroll-locked] {
+    overflow: unset !important;
+  }
+
+  /* Cursor pointer for buttons */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* Prevent focus zoom on mobile devices */
+  @media screen and (max-width: 767px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+}
+
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+}
+
+@utility no-scrollbar {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+@utility faded-bottom {
+  @apply after:pointer-events-none after:absolute after:inset-s-0 after:bottom-0 after:hidden after:h-32 after:w-full after:rounded-b-2xl after:bg-[linear-gradient(180deg,transparent_10%,var(--background)_70%)] md:after:block;
+}
+
+/* styles.css */
+.CollapsibleContent {
+  overflow: hidden;
+}
+.CollapsibleContent[data-state='open'] {
+  animation: slideDown 300ms ease-out;
+}
+.CollapsibleContent[data-state='closed'] {
+  animation: slideUp 300ms ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    height: var(--radix-collapsible-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+@keyframes reasoning-progress-shimmer {
+  from {
+    transform: translateX(-140%);
+  }
+  to {
+    transform: translateX(260%);
+  }
+}
+
+@keyframes reasoning-progress-reveal {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes reasoning-success-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.65);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.14);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes reasoning-success-halo {
+  0% {
+    opacity: 0.85;
+    transform: scale(0.75);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.85);
+  }
+}
+
+.reasoning-progress-fill {
+  transform-origin: left center;
+}
+
+.reasoning-progress-running::after {
+  position: absolute;
+  inset: 0;
+  width: 38%;
+  content: '';
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 78%),
+    transparent
+  );
+  animation: reasoning-progress-shimmer 1.35s linear infinite;
+}
+
+.reasoning-progress-complete {
+  animation: reasoning-progress-reveal 780ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.reasoning-success-node {
+  animation: reasoning-success-pop 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.reasoning-success-halo {
+  position: relative;
+  box-shadow:
+    0 0 0 5px rgb(124 58 237 / 10%),
+    0 0 24px rgb(99 102 241 / 36%);
+}
+
+.reasoning-success-halo::before,
+.reasoning-success-halo::after {
+  position: absolute;
+  inset: -5px;
+  border: 1px solid rgb(124 58 237 / 52%);
+  border-radius: 9999px;
+  pointer-events: none;
+  content: '';
+  animation: reasoning-success-halo 1.8s ease-out infinite;
+}
+
+.reasoning-success-halo::after {
+  animation-delay: 900ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reasoning-progress-running::after,
+  .reasoning-progress-complete,
+  .reasoning-success-node,
+  .reasoning-success-halo::before,
+  .reasoning-success-halo::after {
+    animation: none;
+  }
+}
