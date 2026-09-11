@@ -1215,27 +1215,96 @@ def filter_evidence(evidence, perspective):
     ]
 
 
-def filter_reasoning_rounds(rounds, perspective, allowed_ids=None):
-    """保留每轮推理，但只返回当前视角可见的证据和证据编号。"""
+def normalize_evidence_for_api(evidence, index=0):
+    """补齐前端展示所需字段，同时保留数据库中的原始证据字段。"""
+    if not isinstance(evidence, dict):
+        return None
+    item = dict(evidence)
+    evidence_type = item.get("type") or "runtime"
+    item["type"] = evidence_type
+    item.setdefault("evidence_id", f"E-{index + 1:02d}")
+    item.setdefault("source", item.get("topic") or item.get("file") or "后端证据")
+    item.setdefault("title", item.get("name") or f"证据 {index + 1}")
+    if not item.get("excerpt"):
+        value = item.get("content")
+        if value is None:
+            value = item.get("snippet")
+        if value is None:
+            value = item.get("value")
+        if value is None:
+            value = item.get("data")
+        item["excerpt"] = (
+            value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+            if value is not None
+            else ""
+        )
+    item.setdefault("impact", item.get("description") or "该证据属于本次 Run 的可审计输入。")
+    return item
+
+
+def normalize_evidence_list(evidence):
+    """批量标准化证据，忽略损坏的非对象项。"""
+    if not isinstance(evidence, list):
+        return []
+    return [
+        normalized
+        for index, item in enumerate(evidence)
+        if (normalized := normalize_evidence_for_api(item, index)) is not None
+    ]
+
+
+def build_evidence_by_perspective(evidence):
+    """按每条证据的 visible_to 建立视角到 evidence_id 的索引。"""
+    result = {perspective: [] for perspective in SUPPORTED_PERSPECTIVES}
+    if not isinstance(evidence, list):
+        return result
+
+    for item in evidence:
+        if not isinstance(item, dict) or not item.get("evidence_id"):
+            continue
+        evidence_id = item["evidence_id"]
+        # general 是完整基础视角；其余视角遵循证据自身的 visible_to 标记。
+        result["general"].append(evidence_id)
+        visible_to = item.get("visible_to")
+        if isinstance(visible_to, list):
+            for perspective in SUPPORTED_PERSPECTIVES[1:]:
+                if perspective in visible_to:
+                    result[perspective].append(evidence_id)
+    return result
+
+
+def filter_reasoning_rounds(rounds, perspective, visible_evidence=None):
+    """保留每轮推理，并根据 evidence_id 回填当前视角可见的证据对象。"""
     if not isinstance(rounds, list):
         return []
-    allowed_ids = set(allowed_ids or [])
+    evidence_by_id = {
+        evidence.get("evidence_id"): evidence
+        for evidence in (visible_evidence or [])
+        if isinstance(evidence, dict) and evidence.get("evidence_id")
+    }
     filtered_rounds = []
     for item in rounds:
         if not isinstance(item, dict):
             continue
         current = dict(item)
-        round_evidence = filter_evidence(item.get("evidence", []), perspective)
-        visible_ids = {
+        # 优先使用轮次保存的 evidence_ids，从 Run 总证据中回填完整对象；
+        # 兼容旧轮次没有 evidence_ids、但直接保存了 evidence 对象的情况。
+        round_ids = item.get("evidence_ids", [])
+        if isinstance(round_ids, list):
+            round_evidence = [
+                evidence_by_id[evidence_id]
+                for evidence_id in round_ids
+                if evidence_id in evidence_by_id
+            ]
+        else:
+            round_evidence = []
+        if not round_evidence:
+            round_evidence = filter_evidence(item.get("evidence", []), perspective)
+        current["evidence"] = round_evidence
+        current["evidence_ids"] = [
             evidence.get("evidence_id")
             for evidence in round_evidence
             if evidence.get("evidence_id")
-        }
-        current["evidence"] = round_evidence
-        current["evidence_ids"] = [
-            evidence_id
-            for evidence_id in item.get("evidence_ids", [])
-            if evidence_id in visible_ids or evidence_id in allowed_ids
         ]
         filtered_rounds.append(current)
     return filtered_rounds
@@ -1256,14 +1325,20 @@ def parse_output_sections(output):
 
 def build_perspective_view(output, evidence, rounds, perspective):
     """构造前端三视角共用的数据协议，不伪造不存在的指标或任务。"""
-    visible_evidence = filter_evidence(evidence, perspective)
-    visible_ids = [
-        item.get("evidence_id")
-        for item in visible_evidence
-        if item.get("evidence_id")
-    ]
-    visible_rounds = filter_reasoning_rounds(rounds, perspective, visible_ids)
-    by_type = {}
+    normalized_evidence = normalize_evidence_list(evidence)
+    visible_evidence = filter_evidence(normalized_evidence, perspective)
+    visible_rounds = filter_reasoning_rounds(
+        rounds,
+        perspective,
+        visible_evidence,
+    )
+    by_type = {
+        "log": [],
+        "runtime": [],
+        "parameter": [],
+        "source_code": [],
+        "message_mapping": [],
+    }
     for item in visible_evidence:
         by_type.setdefault(item.get("type", "unknown"), []).append(item)
 
@@ -1319,27 +1394,33 @@ def row_to_run(row, include_details=False, perspective="general"):
         if not isinstance(reasoning_rounds, list):
             reasoning_rounds = []
         raw_evidence = json.loads(row["evidence_json"] or "[]")
+        normalized_evidence = normalize_evidence_list(raw_evidence)
         raw_output = row["output"] or ""
+        evidence_by_perspective = build_evidence_by_perspective(normalized_evidence)
+        # 顶层返回 Run 的完整基础证据；视角过滤只放在 perspective_view 中。
+        # 这样前端可以先通过 evidence_id 回填证据，再按 visible_to 组织不同视角。
         perspective_evidence = filter_evidence(raw_evidence, perspective)
+        complete_rounds = filter_reasoning_rounds(
+            reasoning_rounds,
+            "general",
+            normalized_evidence,
+        )
         run.update(
             {
                 "perspective": perspective,
-                "evidence": perspective_evidence,
+                "evidence": normalized_evidence,
                 "output": raw_output,
                 "errors": json.loads(row["errors_json"]),
                 "valid_evidence_ids": [
                     item.get("evidence_id")
-                    for item in perspective_evidence
+                    for item in normalized_evidence
                     if item.get("evidence_id")
                 ],
+                "evidence_by_perspective": evidence_by_perspective,
                 "timeline": read_timeline(row),
-                "reasoning_rounds": filter_reasoning_rounds(
-                    reasoning_rounds,
-                    perspective,
-                    [item.get("evidence_id") for item in perspective_evidence],
-                ),
+                "reasoning_rounds": complete_rounds,
                 "perspective_view": build_perspective_view(
-                    raw_output, raw_evidence, reasoning_rounds, perspective
+                    raw_output, normalized_evidence, reasoning_rounds, perspective
                 ),
             }
         )
