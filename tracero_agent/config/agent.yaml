@@ -3,7 +3,7 @@ tracero_agent:
     robot_id: "tc-01"
     static_index_version: "v1"
     backend_url: "http://127.0.0.1:8000"
-    output_dir: "/root/workspace/tracero_agent_data"
+    output_dir: "~/.local/share/tracero_agent"
 
     pre_window_sec: 5.0
     post_window_sec: 2.0

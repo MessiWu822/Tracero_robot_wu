@@ -1,0 +1,25 @@
+repositories:
+  DynamixelSDK:
+    type: git
+    url: https://github.com/ROBOTIS-GIT/DynamixelSDK.git
+    version: 0d3403df29561890eb168652b2ed234dd6728bb2
+  hls_lfcd_lds_driver:
+    type: git
+    url: https://github.com/ROBOTIS-GIT/hls_lfcd_lds_driver.git
+    version: e13c899e6ef36b2984a9cf3f75ad9b477fbce3f3
+  turtlebot3:
+    type: git
+    url: https://github.com/ROBOTIS-GIT/turtlebot3.git
+    version: ed3521af40f2f73711aace307853bbf125583418
+  turtlebot3_msgs:
+    type: git
+    url: https://github.com/ROBOTIS-GIT/turtlebot3_msgs.git
+    version: bf28eaed979bec8c79ed19a8aa0e26e96a6529d1
+  turtlebot3_simulations:
+    type: git
+    url: https://github.com/ROBOTIS-GIT/turtlebot3_simulations.git
+    version: a35a56c8b04877dc89772b598084d8ce648a9023
+  navigation2:
+    type: git
+    url: https://github.com/ros-navigation/navigation2.git
+    version: 3c3db59d6969d8ecee8e68468693d006397f4a0c

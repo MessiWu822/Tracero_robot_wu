@@ -1,0 +1,18 @@
+services:
+  tracero-robot:
+    build:
+      context: ../..
+      dockerfile: robot/docker/Dockerfile
+    environment:
+      DISPLAY: ${DISPLAY:-:0}
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-30}
+      TURTLEBOT3_MODEL: ${TURTLEBOT3_MODEL:-burger}
+    network_mode: host
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - tracero-data:/root/.local/share/tracero_agent
+    stdin_open: true
+    tty: true
+
+volumes:
+  tracero-data:

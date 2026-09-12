@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# ROS 2 / colcon
+build/
+install/
+log/
+
+# Runtime data
+tracero_agent_data/
+*.db3
+*.mcap
+*.bag
+
+# Local configuration and secrets
+.env
+*.pem
+*.key
+id_rsa
+id_ed25519
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

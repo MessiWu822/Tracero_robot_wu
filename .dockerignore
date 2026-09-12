@@ -1,0 +1,13 @@
+.git
+.github
+frontend
+first try
+build
+install
+log
+robot/workspace
+robot/tools
+robot/docs
+robot/simulation
+**/__pycache__
+**/*.pyc

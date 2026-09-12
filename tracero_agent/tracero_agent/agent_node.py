@@ -38,10 +38,12 @@ def finite_float(value, default=0.0):
     value = float(value)
     return value if math.isfinite(value) else float(default)
 
+
 def uint8_value(value):
     if isinstance(value, (bytes, bytearray)):
         return value[0] if value else 0
     return int(value)
+
 
 class TraceroAgent(Node):
 
@@ -64,7 +66,7 @@ class TraceroAgent(Node):
         self.declare_parameter("backend_url", "http://127.0.0.1:8000")
         self.declare_parameter(
             "output_dir",
-            "/root/workspace/tracero_agent_data",
+            "~/.local/share/tracero_agent",
         )
         self.declare_parameter("pre_window_sec", 5.0)
         self.declare_parameter("post_window_sec", 2.0)

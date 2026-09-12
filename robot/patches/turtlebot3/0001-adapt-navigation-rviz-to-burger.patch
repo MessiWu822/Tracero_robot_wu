@@ -1,0 +1,33 @@
+From: Tracero project
+Subject: [PATCH] Adapt Navigation2 RViz frames to TurtleBot3 Burger
+Upstream-Base: ed3521af40f2f73711aace307853bbf125583418
+
+The upstream RViz configuration lists Waffle camera and split rear caster
+frames. Tracero's verified Humble simulation uses Burger, whose description
+publishes a single caster_back_link and no camera frames.
+
+diff --git a/turtlebot3_navigation2/rviz/tb3_navigation2.rviz b/turtlebot3_navigation2/rviz/tb3_navigation2.rviz
+index 0b8a5a4..7b9ae47 100644
+--- a/turtlebot3_navigation2/rviz/tb3_navigation2.rviz
++++ b/turtlebot3_navigation2/rviz/tb3_navigation2.rviz
+@@ -87,19 +87,7 @@ Visualization Manager:
+           Value: true
+         base_scan:
+           Value: true
+-        camera_depth_frame:
+-          Value: true
+-        camera_depth_optical_frame:
+-          Value: true
+-        camera_link:
+-          Value: true
+-        camera_rgb_frame:
+-          Value: true
+-        camera_rgb_optical_frame:
+-          Value: true
+-        caster_back_left_link:
+-          Value: true
+-        caster_back_right_link:
++        caster_back_link:
+           Value: true
+         imu_link:
+           Value: true

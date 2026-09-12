@@ -1,0 +1,31 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="tc01_wall">
+    <!-- 静态实体：生成后不会被机器人撞开 -->
+    <static>true</static>
+
+    <link name="wall_link">
+      <collision name="wall_collision">
+        <geometry>
+          <!-- x=厚度，y=横向宽度，z=高度，单位均为米 -->
+          <box>
+            <size>0.15 4.81 0.50</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <visual name="wall_visual">
+        <geometry>
+          <box>
+            <size>0.15 4.81 0.50</size>
+          </box>
+        </geometry>
+        <material>
+          <!-- 红色，方便演示时快速确认注入成功 -->
+          <ambient>1 0 0 1</ambient>
+          <diffuse>1 0 0 1</diffuse>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>
