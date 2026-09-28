@@ -3,7 +3,7 @@ tracero_agent:
     robot_id: "tc-01"
     static_index_version: "v1"
     backend_url: "http://127.0.0.1:8000"
-    output_dir: "~/.local/share/tracero_agent"
+    output_dir: "/root/workspace/tracero_agent_data"
 
     pre_window_sec: 5.0
     post_window_sec: 2.0
@@ -12,6 +12,8 @@ tracero_agent:
     min_goal_progress_m: 0.2
     max_demo_wait_sec: 60.0
     obstacle_distance_m: 0.8
+    contact_topic: "/tc01/bumper_states"
+    wall_contact_token: "tc01_wall"
 
     http_timeout_sec: 5.0
     max_retry_count: 3

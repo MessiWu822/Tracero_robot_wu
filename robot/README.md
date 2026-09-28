@@ -35,6 +35,12 @@ ros2 pkg executables tc01_auto_injector
 For a source build, follow docs/build.md. Simulation and real-robot procedures
 are separate because their device and display requirements differ.
 
+For the complete beginner-friendly TC-01 collision procedure, start with
+[docs/tc01.md](docs/tc01.md). It assumes the base Windows/WSL2/Docker guide is
+finished and documents the exact container paths, build commands, launch order,
+manual and automatic injection modes, acceptance evidence, reset procedure, and
+troubleshooting.
+
 ## Status
 
 The source packages compile in the original ROS 2 Humble development

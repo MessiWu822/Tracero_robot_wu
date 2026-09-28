@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 
 import json
 import math
@@ -17,6 +16,7 @@ from rclpy.qos import qos_profile_sensor_data
 
 from action_msgs.msg import GoalStatusArray
 from diagnostic_msgs.msg import DiagnosticArray
+from gazebo_msgs.msg import ContactsState
 from geometry_msgs.msg import Twist
 from nav2_msgs.action._navigate_to_pose import (
     NavigateToPose_FeedbackMessage,
@@ -66,7 +66,7 @@ class TraceroAgent(Node):
         self.declare_parameter("backend_url", "http://127.0.0.1:8000")
         self.declare_parameter(
             "output_dir",
-            "~/.local/share/tracero_agent",
+            "/root/workspace/tracero_agent_data",
         )
         self.declare_parameter("pre_window_sec", 5.0)
         self.declare_parameter("post_window_sec", 2.0)
@@ -75,11 +75,12 @@ class TraceroAgent(Node):
         self.declare_parameter("min_goal_progress_m", 0.2)
         self.declare_parameter("max_demo_wait_sec", 60.0)
         self.declare_parameter("obstacle_distance_m", 0.8)
+        self.declare_parameter("contact_topic", "/tc01/bumper_states")
+        self.declare_parameter("wall_contact_token", "tc01_wall")
         self.declare_parameter("http_timeout_sec", 5.0)
         self.declare_parameter("max_retry_count", 3)
         self.declare_parameter("controller_frequency", 20.0)
         self.declare_parameter("update_frequency", 5.0)
-
         self.robot_id = str(self.get_parameter("robot_id").value)
         self.static_index_version = str(
             self.get_parameter("static_index_version").value
@@ -110,6 +111,12 @@ class TraceroAgent(Node):
         )
         self.obstacle_distance_m = float(
             self.get_parameter("obstacle_distance_m").value
+        )
+        self.contact_topic = str(
+            self.get_parameter("contact_topic").value
+        )
+        self.wall_contact_token = str(
+            self.get_parameter("wall_contact_token").value
         )
         self.http_timeout_sec = float(
             self.get_parameter("http_timeout_sec").value
@@ -146,11 +153,15 @@ class TraceroAgent(Node):
         self.lock = threading.RLock()
         self.pre_buffer = deque()
         self.pending_event = None
+        self.queued_events = deque()
         self.last_written = {}
         self.last_topic_time = {}
 
         self.injection_time = None
         self.last_obstacle_time = None
+        self.last_contact_time = None
+        self.collision_detected = False
+        self.last_contact_names = []
         self.feedback_samples = deque()
         self.latest_feedback_goal = None
         self.active_goal = None
@@ -172,6 +183,12 @@ class TraceroAgent(Node):
             "/scan",
             self.scan_callback,
             qos_profile_sensor_data,
+        )
+        self.create_subscription(
+            ContactsState,
+            self.contact_topic,
+            self.contact_callback,
+            10,
         )
         self.create_subscription(
             Odometry,
@@ -283,13 +300,16 @@ class TraceroAgent(Node):
                     break
                 self.pre_buffer.popleft()
 
+            pending_events = list(self.queued_events)
             if self.pending_event is not None:
-                trigger_time = self.pending_event["trigger_time"]
+                pending_events.insert(0, self.pending_event)
+            for pending_event in pending_events:
+                trigger_time = pending_event["trigger_time"]
                 if (
                     trigger_time < now
                     <= trigger_time + self.post_window_sec
                 ):
-                    self.pending_event["post_2s"].append(record.copy())
+                    pending_event["post_2s"].append(record.copy())
 
     def scan_callback(self, message):
         valid = []
@@ -319,6 +339,46 @@ class TraceroAgent(Node):
             "valid_sample_count": len(valid),
         }
         self.add_record("/scan", data, interval=0.2)
+
+    def contact_callback(self, message):
+        """Record physical Gazebo contact independently of LiDAR evidence."""
+        names = []
+        for state in message.states:
+            for value in (
+                getattr(state, "collision1_name", ""),
+                getattr(state, "collision2_name", ""),
+            ):
+                if value and value not in names:
+                    names.append(value)
+
+        if not names:
+            return
+
+        now = unix_time()
+        wall_contact = any(
+            self.wall_contact_token in name or "wall_collision" in name
+            for name in names
+        )
+        with self.lock:
+            self.last_contact_time = now
+            self.collision_detected = True
+            self.last_contact_names = names[:10]
+            active_goal = self.latest_feedback_goal
+            active_status = self.active_status
+            injected = self.injection_time is not None
+
+        self.add_record(
+            self.contact_topic,
+            {
+                "collision_count": len(message.states),
+                "collision_names": names[:10],
+                "wall_contact": wall_contact,
+            },
+            interval=0.1,
+        )
+
+        if injected and wall_contact and active_status == 2 and active_goal:
+            self.trigger_event("navigation_collision", active_goal)
 
     def odom_callback(self, message):
         pose = message.pose.pose
@@ -464,7 +524,7 @@ class TraceroAgent(Node):
     def injection_callback(self, request, response):
         del request
         with self.lock:
-            if self.pending_event is not None:
+            if self.pending_event is not None or self.queued_events:
                 response.success = False
                 response.message = "当前仍在收集 post_2s，请稍后重试。"
                 return response
@@ -483,7 +543,7 @@ class TraceroAgent(Node):
     def reset_callback(self, request, response):
         del request
         with self.lock:
-            if self.pending_event is not None:
+            if self.pending_event is not None or self.queued_events:
                 response.success = False
                 response.message = (
                     "当前仍在收集 post_2s，暂不允许重置。"
@@ -491,7 +551,11 @@ class TraceroAgent(Node):
                 return response
             self.injection_time = None
             self.last_obstacle_time = None
+            self.last_contact_time = None
+            self.collision_detected = False
+            self.last_contact_names = []
             self.feedback_samples.clear()
+            self.queued_events.clear()
             self.reported_events.clear()
 
         response.success = True
@@ -508,6 +572,9 @@ class TraceroAgent(Node):
                 "injection_time": self.injection_time,
                 "active_status": self.active_status,
                 "feedback_samples": len(self.feedback_samples),
+                "collision_detected": self.collision_detected,
+                "last_contact_time": self.last_contact_time,
+                "last_contact_names": list(self.last_contact_names),
                 "unsent_files": len(
                     [
                         name
@@ -608,8 +675,6 @@ class TraceroAgent(Node):
         with self.lock:
             if marker in self.reported_events:
                 return
-            if self.pending_event is not None:
-                return
 
             trigger_time = unix_time()
             pre_5s = [
@@ -621,7 +686,7 @@ class TraceroAgent(Node):
                     <= trigger_time
                 )
             ]
-            self.pending_event = {
+            event = {
                 "event_type": event_type,
                 "trigger_time": trigger_time,
                 "pre_5s": pre_5s,
@@ -629,10 +694,20 @@ class TraceroAgent(Node):
                 "internal_goal": internal_goal,
             }
             self.reported_events.add(marker)
+            queued = self.pending_event is not None
+            if queued:
+                self.queued_events.append(event)
+            else:
+                self.pending_event = event
 
-        self.get_logger().warning(
-            f"触发 {event_type}，开始收集 post_2s。"
-        )
+        if queued:
+            self.get_logger().warning(
+                f"触发 {event_type}，已排队收集 post_2s。"
+            )
+        else:
+            self.get_logger().warning(
+                f"触发 {event_type}，开始收集 post_2s。"
+            )
 
     def timer_callback(self):
         now = unix_time()
@@ -652,7 +727,11 @@ class TraceroAgent(Node):
             pending = self.pending_event
             if pending is None:
                 return
-            self.pending_event = None
+            self.pending_event = (
+                self.queued_events.popleft()
+                if self.queued_events
+                else None
+            )
 
         event = {
             "event_type": pending["event_type"],

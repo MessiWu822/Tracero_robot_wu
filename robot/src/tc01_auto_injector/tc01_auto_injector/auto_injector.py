@@ -21,6 +21,10 @@ class Tc01AutoInjector(Node):
         self.declare_parameter("speed_threshold", 0.05)
         self.declare_parameter("hold_seconds", 1.0)
         self.declare_parameter("cooldown_seconds", 30.0)
+        self.declare_parameter(
+            "agent_injection_service",
+            "/tracero_agent/injection",
+        )
 
         self.declare_parameter(
             "model_file",
@@ -35,11 +39,11 @@ class Tc01AutoInjector(Node):
 
         self.declare_parameter("spawn_x", 0.60)
         self.declare_parameter("spawn_y", 0.0)
-        self.declare_parameter("spawn_z", 0.25)
+        self.declare_parameter("spawn_z", 0.0)
 
         self.declare_parameter(
             "event_log",
-            "~/.local/share/tracero_agent/"
+            "/root/workspace/tracero_tc01/logs/"
             "auto_injection_events.jsonl",
         )
 
@@ -51,6 +55,9 @@ class Tc01AutoInjector(Node):
         )
         self.cooldown_seconds = float(
             self.get_parameter("cooldown_seconds").value
+        )
+        self.agent_injection_service = str(
+            self.get_parameter("agent_injection_service").value
         )
 
         self.model_file = str(
@@ -88,6 +95,10 @@ class Tc01AutoInjector(Node):
         self.delete_client = self.create_client(
             DeleteEntity,
             "/delete_entity",
+        )
+        self.agent_injection_client = self.create_client(
+            Trigger,
+            self.agent_injection_service,
         )
 
         self.create_subscription(
@@ -252,6 +263,16 @@ class Tc01AutoInjector(Node):
 
         self.injected = True
         self.last_injection_ros_time = self.ros_time_seconds()
+
+        # Use the actual successful spawn as the Agent's event anchor.  The
+        # service is optional so the injector remains usable without Agent.
+        if self.agent_injection_client.service_is_ready():
+            self.agent_injection_client.call_async(Trigger.Request())
+        else:
+            self.get_logger().warning(
+                f"Agent 服务 {self.agent_injection_service} 未就绪，"
+                "请手动调用 injection 服务记录本轮注入。"
+            )
 
         event = {
             "event": "wall_injected",

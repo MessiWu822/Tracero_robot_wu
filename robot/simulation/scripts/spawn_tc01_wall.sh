@@ -14,7 +14,7 @@ ENTITY_NAME="tc01_wall"
 # 已试放确认的最终参数
 SPAWN_X=0.60
 SPAWN_Y=0.00
-SPAWN_Z=0.25
+SPAWN_Z=0.00
 
 if [ ! -f "$MODEL_FILE" ]; then
   echo "错误：找不到障碍物模型：$MODEL_FILE" >&2
@@ -32,5 +32,12 @@ ros2 run gazebo_ros spawn_entity.py \
   -x "$SPAWN_X" \
   -y "$SPAWN_Y" \
   -z "$SPAWN_Z"
+
+if ros2 service list | grep -qx '/tracero_agent/injection'; then
+  echo "[TC-01] 通知 Tracero Agent 记录实际注入时刻..."
+  ros2 service call /tracero_agent/injection std_srvs/srv/Trigger "{}"
+else
+  echo "[TC-01] 警告：Agent injection 服务未运行，本轮仅记录物理注入。" >&2
+fi
 
 echo "[TC-01] 注入完成。请确认 Gazebo 中出现红色墙体。"

@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<!-- No RecoveryNode, Spin, BackUp or costmap-clearing branch. -->
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <PipelineSequence name="NavigateWithoutRecovery">
+      <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+      <FollowPath path="{path}" controller_id="FollowPath"/>
+    </PipelineSequence>
+  </BehaviorTree>
+</root>

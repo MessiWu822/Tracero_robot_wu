@@ -15,3 +15,7 @@ Parameters include speed_threshold, hold_seconds, cooldown_seconds, model_file,
 entity_name, spawn_x, spawn_y, spawn_z, and event_log. The default model is
 installed with the package and the default event log is written below the
 current user's local data directory.
+
+After a successful spawn the node calls `/tracero_agent/injection` when that
+service is available, so the Agent uses the real spawn time as its event
+anchor. Without the Agent, the injector continues to work and logs a warning.
