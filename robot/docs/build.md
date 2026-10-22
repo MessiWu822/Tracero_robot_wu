@@ -39,6 +39,11 @@ the rosdep installation step:
 SKIP_ROSDEP=1 ./scripts/build.sh
 ~~~
 
+Before `colcon build`, the build script runs `apply_fault_switches.sh` against
+the pinned `turtlebot3_simulations` source. The Docker image runs the same
+step while it is built, so the installed `turtlebot3_drive` binary and source
+workspace use the same switch-enabled revision.
+
 The steps are intentionally separate so a failed patch is visible before
 compilation. Never silently skip a patch that fails against a new revision.
 

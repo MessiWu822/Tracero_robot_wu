@@ -4,6 +4,9 @@
 # timeout while preserving the upstream Burger parameter file.
 source /opt/ros/humble/setup.bash
 
+# TC-01 is the S2/Nav2 scenario; never inherit S1 source faults.
+unset TRACERO_F_B1 TRACERO_F_B2
+
 # Load source-built TurtleBot3/Nav2 overlays when running in the project
 # container. Missing overlays are fine on a system-only ROS installation.
 for setup_file in \

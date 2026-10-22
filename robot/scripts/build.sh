@@ -17,6 +17,9 @@ if [ ! -e "$WORKSPACE_DIR/src/tc01_auto_injector" ]; then
     "$WORKSPACE_DIR/src/tc01_auto_injector"
 fi
 
+bash "$ROBOT_DIR/scripts/apply_fault_switches.sh" \
+  "$WORKSPACE_DIR/src/upstream/turtlebot3_simulations"
+
 if [ "${SKIP_ROSDEP:-0}" != "1" ]; then
   rosdep install \
     --from-paths "$WORKSPACE_DIR/src" \

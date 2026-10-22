@@ -27,6 +27,13 @@ COPY robot/patches /tmp/patches
 RUN git -C src/upstream/turtlebot3 apply \
       /tmp/patches/turtlebot3/0001-adapt-navigation-rviz-to-burger.patch
 
+COPY robot/scripts/apply_fault_switches.sh /tmp/apply_fault_switches.sh
+RUN bash /tmp/apply_fault_switches.sh /opt/tracero_ws/src/upstream/turtlebot3_simulations
+COPY robot/scripts/run_fault.sh /usr/local/bin/tracero-run-fault
+COPY robot/scripts/run_b1.sh /usr/local/bin/tracero-run-b1
+RUN chmod +x /usr/local/bin/tracero-run-fault
+RUN chmod +x /usr/local/bin/tracero-run-b1
+
 COPY tracero_agent/ src/tracero_agent/
 COPY robot/src/tc01_auto_injector/ src/tc01_auto_injector/
 

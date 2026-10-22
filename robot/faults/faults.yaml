@@ -1,0 +1,84 @@
+# Internal fault registry. Keep this file out of the inference workspace.
+- id: B1
+  switch: TRACERO_F_B1
+  kind: source
+  scenario: S1
+  source_anchor: turtlebot3_gazebo/src/turtlebot3_drive.cpp:update_callback:escape_range
+  correct: "30.0 * DEG2RAD"
+  faulty: "30.0"
+  status: implemented
+  default: off
+
+- id: A1
+  switch: TRACERO_F_A1
+  kind: params
+  scenario: S2
+  selector: navigation launch chooses the A1 overlay when the switch is on
+  default: off
+  status: planned
+
+- id: A2
+  switch: TRACERO_F_A2
+  kind: params
+  scenario: S2
+  selector: navigation launch chooses the A2 overlay when the switch is on
+  default: off
+  status: planned
+
+- id: A3
+  switch: TRACERO_F_A3
+  kind: params
+  scenario: S2
+  selector: navigation launch chooses the A3 overlay when the switch is on
+  default: off
+  status: planned
+
+- id: B2
+  switch: TRACERO_F_B2
+  kind: source
+  scenario: S1
+  source_anchor: turtlebot3_gazebo/src/turtlebot3_drive.cpp:scan_callback
+  correct: "scan_data_[num] = msg->range_max"
+  faulty: "scan_data_[num] = 0.0"
+  selector: B2 workspace injector applies the replacement when TRACERO_F_B2=1
+  default: off
+  status: implemented
+
+- id: C1
+  switch: TRACERO_F_C1
+  kind: model
+  scenario: S2
+  selector: Gazebo launch chooses the C1 SDF when the switch is on
+  default: off
+  status: planned
+
+- id: C2
+  switch: TRACERO_F_C2
+  kind: model
+  scenario: S1 or S2
+  selector: Gazebo launch chooses the C2 SDF when the switch is on
+  default: off
+  status: planned
+
+- id: D1
+  switch: TRACERO_F_D1
+  kind: integration
+  scenario: S2
+  selector: navigation launch overrides one node's use_sim_time when the switch is on
+  default: off
+  status: planned
+
+- id: D2
+  switch: TRACERO_F_D2
+  kind: integration
+  scenario: S2
+  selector: robot_state_publisher chooses the D2 URDF when the switch is on
+  default: off
+  status: planned
+
+- id: D3
+  switch: TRACERO_F_D3
+  kind: integration
+  scenario: S2
+  selector: navigation launch chooses the D3 parameter file when the switch is on
+  default: off

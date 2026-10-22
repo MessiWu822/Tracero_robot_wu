@@ -13,6 +13,8 @@ ros2 pkg prefix turtlebot3_navigation2 >/dev/null
 ros2 pkg prefix nav2_bringup >/dev/null
 ros2 pkg prefix tracero_agent >/dev/null
 ros2 pkg prefix tc01_auto_injector >/dev/null
+ros2 pkg executables turtlebot3_gazebo | grep -q 'turtlebot3_drive'
+test -f "$ROBOT_DIR/scripts/run_b1.sh"
 ros2 pkg executables tracero_agent | grep -q 'agent_node'
 ros2 pkg executables tc01_auto_injector | grep -q 'tc01_auto_injector'
 
